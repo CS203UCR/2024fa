@@ -1,0 +1,2 @@
+/usr/sbin/clearcache > /dev/null
+./hybridsort_cpu ~/courses/CSE142/demo/300000000.bin 134217728

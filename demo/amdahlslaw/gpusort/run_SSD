@@ -1,0 +1,2 @@
+/usr/sbin/clearcache > /dev/null
+./hybridsort /tmp/300000000.bin 134217728 1
