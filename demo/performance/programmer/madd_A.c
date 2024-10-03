@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "perfstats.h"
 
 int ARRAY_SIZE = 8192;
 
@@ -31,6 +32,8 @@ int main(int argc, char **argv)
       c[i][j] = 0;
   }
 //  mm(a, b, c);
+    perfstats_init();
+    perfstats_enable();
   /* Do matrix addition */
     for(i = 0; i < ARRAY_SIZE; i++)
     {
@@ -39,6 +42,9 @@ int main(int argc, char **argv)
         c[i][j] = a[i][j]+b[i][j];
       }
     }
+    perfstats_disable();
+    perfstats_print();
+    perfstats_deinit();
   printf("%d\n",c[rand()%256][rand()%256]);
   return 0;
 }
