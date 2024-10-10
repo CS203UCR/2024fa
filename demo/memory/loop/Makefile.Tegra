@@ -1,0 +1,24 @@
+all: matrix_op_A_O3_nano matrix_op_B_O3_nano matrix_op_A_nano matrix_op_B_nano
+ 
+EXTRA_CFLAGS = -DHAVE_LINUX_PERF_EVENT_H -g 
+
+matrix_op_nano: matrix_op.c 
+	$(CC) -O3 -DNO $(EXTRA_CFLAGS) matrix_op.c -o matrix_op_nano
+
+matrix_op_A_nano: matrix_op.c 
+	$(CC) -O0 $(EXTRA_CFLAGS) -DA matrix_op.c -o matrix_op_A_nano
+
+
+matrix_op_B_nano: matrix_op.c 
+	$(CC) -O0 $(EXTRA_CFLAGS)  matrix_op.c -o matrix_op_B_nano
+	
+matrix_op_A_O3_nano: matrix_op.c 
+	$(CC) $(EXTRA_CFLAGS) -O3 -DA matrix_op.c -o matrix_op_A_O3_nano
+
+matrix_op_B_O3_nano: matrix_op.c 
+	$(CC) $(EXTRA_CFLAGS) -O3  matrix_op.c -o matrix_op_B_O3_nano
+
+clean:
+		rm -f matrix_op_A_nano matrix_op_B_nano *_O3_nano *~ 
+		#hotspot hotspot_omp
+		
