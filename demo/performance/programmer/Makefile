@@ -5,16 +5,16 @@ EXTRA_CFLAGS = -DHAVE_LINUX_PERF_EVENT_H -g
 madd: madd.c 
 	$(CC) -O0 $(EXTRA_CFLAGS) madd.c -o madd
 
-madd_A: madd_A.c 
-	$(CC) -O0 $(EXTRA_CFLAGS)  madd_A.c -o madd_A
+madd_A: madd_A.c perfstats.c
+	$(CC) -O0 $(EXTRA_CFLAGS) perfstats.c madd_A.c -o madd_A
 
-madd_B: madd_B.c 
-	$(CC) -O0 $(EXTRA_CFLAGS)  madd_B.c -o madd_B
-madd_A_O3: madd_A.c 
-	$(CC) $(EXTRA_CFLAGS) -O3  madd_A.c -o madd_A_O3
+madd_B: madd_B.c  perfstats.c
+	$(CC) -O0 $(EXTRA_CFLAGS) perfstats.c madd_B.c -o madd_B
+madd_A_O3: madd_A.c  perfstats.c
+	$(CC) $(EXTRA_CFLAGS) -O3 perfstats.c madd_A.c -o madd_A_O3
 
-madd_B_O3: madd_B.c 
-	$(CC) $(EXTRA_CFLAGS) -O3  madd_B.c -o madd_B_O3
+madd_B_O3: madd_B.c perfstats.c
+	$(CC) $(EXTRA_CFLAGS) -O3 perfstats.c madd_B.c -o madd_B_O3
 
 madd_A_unroll: madd_A.c 
 	$(CC) $(EXTRA_CFLAGS) -O3  madd_A_unroll.c -o madd_A_unroll

@@ -1,4 +1,7 @@
 #ifdef HAVE_LINUX_PERF_EVENT_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "perfstats.h"
 
 #include <linux/perf_event.h>
@@ -18,40 +21,45 @@
 #include <sched.h>
 #include <string.h>
 #define CACHE_CONTROL_FLUSH_CACHES _IO('q', 1)
+int cpu=0;
 
 struct timeval time_start, time_end;
 double elapsed_time;
-
 enum {
-    COUNTER_PAGE_FAULTS,
     COUNTER_CPU_CYCLES,
-    STALLED_CYCLES_FRONTEND,
-    STALLED_CYCLES_BACKEND,
+//    STALLED_CYCLES_FRONTEND,
+//    STALLED_CYCLES_BACKEND,
     INSTRUCTIONS,    
-    DTLB_ACCESSES,
-    DTLB_MISSES,
-    BRANCHES,
-    BRANCH_MISSES,
-    CONTEXT_SWITCHES,
+//    DTLB_ACCESSES,
+//    DTLB_MISSES,
+    DL1_LOAD_ACCESSES,
+    DL1_LOAD_MISSES,
+    DL1_STORE_ACCESSES,
+    DL1_STORE_MISSES,
+    DL1_PREFETCH_ACCESSES,
+    DL1_PREFETCH_MISSES,
 };
 
+
 static struct perf_event_attr attrs[] = {
-    { .type = PERF_TYPE_SOFTWARE, .config = PERF_COUNT_SW_PAGE_FAULTS},
     { .type = PERF_TYPE_HARDWARE, .config = PERF_COUNT_HW_CPU_CYCLES},
-    { .type = PERF_TYPE_HARDWARE, .config = PERF_COUNT_HW_STALLED_CYCLES_FRONTEND},
-    { .type = PERF_TYPE_HARDWARE, .config = PERF_COUNT_HW_STALLED_CYCLES_BACKEND},
+//    { .type = PERF_TYPE_HARDWARE, .config = PERF_COUNT_HW_STALLED_CYCLES_FRONTEND},
+//    { .type = PERF_TYPE_HARDWARE, .config = PERF_COUNT_HW_STALLED_CYCLES_BACKEND},
     { .type = PERF_TYPE_HARDWARE, .config = PERF_COUNT_HW_INSTRUCTIONS},
-    { .type = PERF_TYPE_HW_CACHE, .config = PERF_COUNT_HW_CACHE_DTLB | (PERF_COUNT_HW_CACHE_OP_READ << 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16) },
-    { .type = PERF_TYPE_HW_CACHE, .config = PERF_COUNT_HW_CACHE_DTLB | (PERF_COUNT_HW_CACHE_OP_READ << 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS << 16) },
-    { .type = PERF_TYPE_HARDWARE, .config = PERF_COUNT_HW_BRANCH_INSTRUCTIONS},
-    { .type = PERF_TYPE_HARDWARE, .config = PERF_COUNT_HW_BRANCH_MISSES},
-    { .type = PERF_TYPE_SOFTWARE, .config = PERF_COUNT_SW_CONTEXT_SWITCHES},
+//    { .type = PERF_TYPE_HW_CACHE, .config = PERF_COUNT_HW_CACHE_DTLB | (PERF_COUNT_HW_CACHE_OP_READ << 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16) },
+//    { .type = PERF_TYPE_HW_CACHE, .config = PERF_COUNT_HW_CACHE_DTLB | (PERF_COUNT_HW_CACHE_OP_READ << 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS << 16) },
+    { .type = PERF_TYPE_HW_CACHE, .config = PERF_COUNT_HW_CACHE_L1D | (PERF_COUNT_HW_CACHE_OP_READ << 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16) },
+    { .type = PERF_TYPE_HW_CACHE, .config = PERF_COUNT_HW_CACHE_L1D | (PERF_COUNT_HW_CACHE_OP_READ << 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS << 16) },
+    { .type = PERF_TYPE_HW_CACHE, .config = PERF_COUNT_HW_CACHE_L1D | (PERF_COUNT_HW_CACHE_OP_WRITE << 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16) },
+    { .type = PERF_TYPE_HW_CACHE, .config = PERF_COUNT_HW_CACHE_L1D | (PERF_COUNT_HW_CACHE_OP_WRITE << 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS << 16) },
+    { .type = PERF_TYPE_HW_CACHE, .config = PERF_COUNT_HW_CACHE_L1D | (PERF_COUNT_HW_CACHE_OP_PREFETCH << 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16) },
+    { .type = PERF_TYPE_HW_CACHE, .config = PERF_COUNT_HW_CACHE_L1D | (PERF_COUNT_HW_CACHE_OP_PREFETCH << 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS << 16) },
     };
 
 #define STAT_COUNT (sizeof(attrs) / sizeof(*attrs))
+unsigned long long performance_counters[STAT_COUNT];
 double total_time;
 static int fds[STAT_COUNT];
-int cpu=0;
 
 static inline int
 sys_perf_event_open(struct perf_event_attr *attr,
@@ -63,39 +71,6 @@ sys_perf_event_open(struct perf_event_attr *attr,
                    group_fd, flags);
 }
 
-void restore_cpufrequnecy() {
-    char cmdline[1024];
-    sprintf(cmdline,"/usr/sbin/changefreq %d 1550000 3200000",cpu);
-    system(cmdline);
-}
-void change_cpufrequnecy(int MHz) {
-    int KHz = MHz*1000;
-    char cmdline[1024];
-    cpu = sched_getcpu();
-    sprintf(cmdline,"/usr/sbin/changefreq %d %d %d",cpu,KHz,KHz);
-    system(cmdline);
-    return;
-}
-
-void flush_caches() {
-
-        if( access( "/dev/cache_control", R_OK|W_OK ) != 0) {
-//                fprintf(stderr, "Couldn't open '/dev/cache_control'.  Not flushing caches.\n");
-                return;
-        }
-
-        int fd = open("/dev/cache_control", O_RDWR);
-        if (fd == -1) {
-//                fprintf(stderr, "Couldn't open '/dev/cache_control' to flush caches: \n");
-                return;
-        }
-
-        int r = ioctl(fd, CACHE_CONTROL_FLUSH_CACHES);
-        if (r == -1) {
-//                fprintf(stderr, "Flushing caches failed: ");
-                exit(1);
-        }
-}
 void perfstats_init(void)
 {
     int pid = getpid();
@@ -123,17 +98,34 @@ void perfstats_deinit(void)
 
 void perfstats_enable(void)
 {
-    int i;
+    int i, ret;
+    unsigned long long *garbage = NULL;
     for (i = 0; i < STAT_COUNT; i++) {
         if (fds[i] <= 0)
             continue;
 
         ioctl(fds[i], PERF_EVENT_IOC_ENABLE);
     }
+//    return garbage;
+//    garbage = flush_caches();
+    for (i = 0; i < STAT_COUNT; i++) {
+        if (fds[i] > 0)
+            ret = read(fds[i], &performance_counters[i], sizeof(performance_counters[i]));
+    }
     gettimeofday(&time_start, NULL);
 }
+void perfstats_reenable(void)
+{
+    int i, ret;
+    for (i = 0; i < STAT_COUNT; i++) {
+        if (fds[i] <= 0)
+            continue;
 
-void perfstats_disable(void)
+        ret = ioctl(fds[i], PERF_EVENT_IOC_ENABLE);
+    }
+}
+
+void perfstats_disable()
 {
     int i;
     gettimeofday(&time_end, NULL);
@@ -143,17 +135,37 @@ void perfstats_disable(void)
 
         ioctl(fds[i], PERF_EVENT_IOC_DISABLE);
     }
-    gettimeofday(&time_end, NULL);
+//    gettimeofday(&time_end, NULL);
     elapsed_time = ((time_end.tv_sec * 1000000.0 + time_end.tv_usec) - (time_start.tv_sec * 1000000.0 + time_start.tv_usec));
     elapsed_time/=1000000.0;
+//    free(garbage);
 }
 
-static uint64_t readcounter(int i)
+static unsigned long long readcounter(int i)
 {
-    uint64_t ret;
+    unsigned long long ret;
+    if(fds[i] <= 0)    
+        return 0;
     read(fds[i], &ret, sizeof(ret));
+//        fprintf(stderr,"PC: %d %lu\n",i, ret);
 
     return ret;
+}
+
+static unsigned long long readall()
+{
+    unsigned long long ret;
+    int r;
+    int i;
+    for (i = 0; i < STAT_COUNT; i++) {
+        if (fds[i] > 0)
+        {
+            r = read(fds[i], &ret, sizeof(ret));
+            performance_counters[i]=ret-performance_counters[i];
+        }
+    }
+
+    return i;
 }
 
 void perfstats_print_header(char *filename, char *header)
@@ -164,20 +176,40 @@ void perfstats_print_header(char *filename, char *header)
     fclose(fout);
 }
 
-void perfstats_print(char *preamble, char *filename, char *epilogue)
+void perfstats_print()
 {
     FILE *fout;
-    uint64_t ic, cycles;
-    fout = fopen(filename, "a");
-    ic = readcounter(INSTRUCTIONS);
+    unsigned long long ic, cycles, loads=0, load_misses=0, stores=0, store_misses=0, prefetches=0, prefetch_misses=0;
+//    fout = fopen(filename, "a");
+    readall();
+    ic = performance_counters[INSTRUCTIONS];
+    cycles = performance_counters[COUNTER_CPU_CYCLES];
+    loads = performance_counters[DL1_LOAD_ACCESSES];
+    load_misses = performance_counters[DL1_LOAD_MISSES];
+    stores = performance_counters[DL1_STORE_ACCESSES];
+    store_misses = performance_counters[DL1_STORE_MISSES];
+    prefetches = performance_counters[DL1_PREFETCH_ACCESSES];
+    prefetch_misses = performance_counters[DL1_PREFETCH_MISSES];
+
+/*    ic = readcounter(INSTRUCTIONS);
     cycles = readcounter(COUNTER_CPU_CYCLES);
-    fprintf(fout, "%s %lu,%lu,%lf,%lf,%lf,%lf%s", 
-                     preamble, 
+    loads = readcounter(DL1_LOAD_ACCESSES);
+    load_misses = readcounter(DL1_LOAD_MISSES);
+    stores = readcounter(DL1_STORE_ACCESSES);
+    store_misses = readcounter(DL1_STORE_MISSES);*/
+//    prefetches = readcounter(DL1_PREFETCH_ACCESSES);
+//    prefetch_misses = readcounter(DL1_PREFETCH_MISSES);
+
+    fprintf(stderr,"%llu,%llu,%lf,%lf,%lf,%lf,%llu,%llu\n", 
                      ic, 
                      cycles,
                      (double)cycles/ic,
-                     cycles/((double)elapsed_time*1000000.0), ((double)elapsed_time*1000000000.0)/cycles,
-                     elapsed_time, epilogue);
-    fclose(fout);
+                     ((double)elapsed_time*1000000000.0)/cycles, 
+                      elapsed_time,(double)(load_misses+store_misses+prefetch_misses)/(double)(loads+stores+prefetches),load_misses+store_misses+prefetch_misses,loads+stores+prefetches);
+//    fclose(fout);
 }
+#ifdef __cplusplus
+}
+#endif
+
 #endif
