@@ -1,22 +1,25 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include "perfstats.h"
 
-void blockmm(double **a, double **b, double **c);
-int n=1;
-  int ARRAY_SIZE=500;
+void blockmm(double **a, double **b, double **c, uint64_t M, uint64_t N, uint64_t K);
+int tile_size=1;
+int ARRAY_SIZE=500;
 int main(int argc, char **argv)
 {
   double **a, **b, **c, *temp;
-  int i, j, k;
+  uint64_t i, j, k;
+  uint64_t M, N, K;
   /* initialize a, b */
   if(argc == 2)
-    n = atoi(argv[1]);
+    tile_size = atoi(argv[1]);
   if(argc >= 3)
   {
     ARRAY_SIZE = atoi(argv[1]);
-    n = atoi(argv[2]);
+    tile_size = atoi(argv[2]);
   }
+  M = N = K = ARRAY_SIZE;
   temp = (double *)valloc(ARRAY_SIZE*ARRAY_SIZE*sizeof(double)*3);
   a = (double **)malloc(ARRAY_SIZE*sizeof(double *));
   for(i = 0; i < ARRAY_SIZE; i++)
@@ -42,9 +45,10 @@ int main(int argc, char **argv)
     for(j = 0; j < ARRAY_SIZE; j++)
       c[i][j] = 0;
   }
+  printf("%d,%lu,",ARRAY_SIZE,tile_size);
   perfstats_init();
   perfstats_enable();
-  blockmm(a, b, c);
+  blockmm(a, b, c, M, N, K);
   perfstats_disable();
   perfstats_print();
   perfstats_deinit();
@@ -53,18 +57,18 @@ int main(int argc, char **argv)
 }
 
 //START
-void blockmm(double **a, double **b, double **c)
+void blockmm(double **a, double **b, double **c, uint64_t M, uint64_t N, uint64_t K)
 {
-  int i,j,k, ii, jj, kk;
-  for(i = 0; i < ARRAY_SIZE; i+=(ARRAY_SIZE/n))
+  uint64_t i,j,k, ii, jj, kk;
+  for(i = 0; i < M; i+=tile_size)
   {
-    for(j = 0; j < ARRAY_SIZE; j+=(ARRAY_SIZE/n))
+    for(j = 0; j < K; j+=tile_size)
     {
-      for(k = 0; k < ARRAY_SIZE; k+=(ARRAY_SIZE/n))
+      for(k = 0; k < N; k+=tile_size)
       {        
-          for(ii = i; ii < i+(ARRAY_SIZE/n); ii++)
-            for(jj = j; jj < j+(ARRAY_SIZE/n); jj++)
-              for(kk = k; kk < k+(ARRAY_SIZE/n); kk++)
+          for(ii = i; ii < i+tile_size; ii++)
+            for(jj = j; jj < j+tile_size; jj++)
+              for(kk = k; kk < k+tile_size; kk++)
                 c[ii][jj] += a[ii][kk]*b[kk][jj];
       }
     }
