@@ -1,6 +1,6 @@
 all: matvec matvec_threaded
 
-EXTRA_CFLAGS = -DHAVE_LINUX_PERF_EVENT_H -g -O3 -pthread -w
+EXTRA_CFLAGS = -DHAVE_LINUX_PERF_EVENT_H -g -O3 -pthread
 
 matvec: matvec.c perfstats.c
 	$(CC) $(EXTRA_CFLAGS)  matvec.c perfstats.c -o matvec

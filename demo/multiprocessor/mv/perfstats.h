@@ -21,8 +21,8 @@ void perfstats_disable(int detail);
 void perfstats_print_header(char *, char *);
 void perfstats_print(char *preamble, char *filename, char *epilogue);
 
-
 #endif
+
 #ifdef __cplusplus
 }
 #endif

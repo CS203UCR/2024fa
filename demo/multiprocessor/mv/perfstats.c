@@ -250,13 +250,13 @@ void perfstats_print(char *preamble, char *filename, char *epilogue)
 //    prefetches = readcounter(DL1_PREFETCH_ACCESSES);
 //    prefetch_misses = readcounter(DL1_PREFETCH_MISSES);
 
-    fprintf(fout, "%s%llu,%llu,%lf,%lf,%lf,%lf,%llu,%llu,%lf,%llu,%llu%s", 
+    fprintf(fout, "%s%llu,%llu,%lf,%lf,%lf,%lf,%llu,%llu,%llu,%llu%s", 
                      preamble, 
                      ic, 
                      cycles,
                      (double)cycles/ic,
                      ((double)elapsed_time*1000000000.0)/cycles, 
-                      elapsed_time,(double)(load_misses+store_misses+prefetch_misses)/(double)(loads+stores+prefetches),load_misses+store_misses+prefetch_misses,loads+stores+prefetches,(double)branch_misses/(double)branches,branch_misses,branches,epilogue);
+                      elapsed_time,(double)(load_misses+store_misses+prefetch_misses)/(double)(loads+stores+prefetches),load_misses+store_misses+prefetch_misses,loads+stores+prefetches,branches,branch_misses,epilogue);
     fclose(fout);
 }
 #ifdef __cplusplus

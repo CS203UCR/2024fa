@@ -1,6 +1,6 @@
 EXECS =  testloop testloop_O3 coherence blockmm blockmm_pthread value_of_i vadd_sse fence mfence vadd_sse_two_threads vadd_sse_two_threads_chunk vadd_mt vadd_mt_chunk testloop_volatile testloop_O3_volatile coherence_lock
 
-EXTRA_CFLAGS = -O3 -Wno-format-zero-length -Wno-implicit-function-declaration -w
+EXTRA_CFLAGS = -O3 -Wno-format-zero-length -Wno-implicit-function-declaration
 
 all: $(EXECS)
 

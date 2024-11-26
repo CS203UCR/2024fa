@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
-
+#include <emmintrin.h>
 void* modifya(void *z);
 void* modifyb(void *z);
 volatile int a,b;
@@ -39,10 +39,11 @@ int main()
   return 0;
 }
 #ifdef MFENCE
-#define _update_var(_v, _x) { _v = (_x); asm("mfence"); }
+#define _update_var(_v, _x) { _v = (_x); _mm_mfence(); }
 void* modifya(void *z)
 {
 //  a=1;
+  while(!go);
   _update_var(a,1);
   x=b;
   return NULL;
@@ -50,6 +51,7 @@ void* modifya(void *z)
 void* modifyb(void *z)
 {
 //  b=1;
+  while(!go);
   _update_var(b,1);
   y=a;
   return NULL;
